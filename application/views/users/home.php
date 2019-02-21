@@ -1,0 +1,1 @@
+<h2 class="text-xs-center mt-5 display-3">Bienvenido <?= $this->session->userdata('username') ?></h2>
