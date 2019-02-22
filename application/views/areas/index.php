@@ -1,3 +1,5 @@
+<link href="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/3.3.4/css/inputmask.min.css" rel="stylesheet"/>
+
 <style>
   [v-cloak], [v-cloak] > * {
     display: none;
@@ -8,11 +10,11 @@
 <div id="app">
   <v-app>
   <v-container>
-    <h2 v-cloak class="text-xs-center">Listado de Usuarios</h2>
+    <h2 v-cloak class="text-xs-center">Listado de areas</h2>
     <v-layout>
       <v-flex>
         <v-dialog v-model="dialog" max-width="500px">
-          <v-btn v-cloak slot="activator" color="222222" dark class="mb-2">Crear usuario</v-btn>
+          <v-btn v-cloak slot="activator" color="222222" dark class="mb-2">Añadir area</v-btn>
           <v-card>
             <v-card-title>
               <span v-cloak class="headline">{{ formTitle }}</span>
@@ -21,14 +23,11 @@
             <v-card-text>
               <v-container>
                 <v-layout wrap>
-                  <v-form style="display: contents" ref="form" @submit.prevent="save">
-                    <v-flex xs12>
-                      <v-text-field v-model="editedItem.username" :rules="[rules.required]" label="Nombre de usuario"></v-text-field>
-                    </v-flex>
-                    <v-flex xs12>
-                      <v-text-field :rules="editedItem.id == null ? [rules.required] : []" :hint="editedItem.id == null ? '' : 'Si dejas este campo vacío, la contraseña no cambiará'" :type="see_password ? 'text' : 'password'" v-model="editedItem.password" label="Contraseña" :append-icon="see_password ? 'visibility_off' : 'visibility'" @click:append="()=>{ see_password = !see_password }"></v-text-field>
-                    </v-flex>
-                  </v-form>
+                <v-form ref="form" style="display: contents">
+                  <v-flex xs12>
+                    <v-text-field v-model="editedItem.name" :rules="[rules.required]" label="Nombre"></v-text-field>
+                  </v-flex>
+                </v-form>
                 </v-layout>
               </v-container>
             </v-card-text>
@@ -36,14 +35,14 @@
             <v-card-actions>
               <v-spacer></v-spacer>
               <v-btn v-cloak color="blue darken-1" flat @click="close">Cancelar</v-btn>
-              <v-btn v-cloak color="blue darken-1" flat @click="save" :disabled="cantSubmit">Guardar</v-btn>
+              <v-btn v-cloak color="blue darken-1" flat @click="save" :disabled="!canSubmit" >Guardar</v-btn>
             </v-card-actions>
           </v-card>
         </v-dialog>
         <v-card>
           <v-data-table
             :headers="headers"
-            :items="users"
+            :items="areas"
             class="elevation-1"
             :loading="loading"
             no-data-text="No hay registros"
@@ -51,7 +50,7 @@
           >
             <template slot="items" slot-scope="props">
               <td class="text-xs-left">{{ props.item.id }}</td>
-              <td class="text-xs-left">{{ props.item.username }}</td>
+              <td class="text-xs-left">{{ props.item.name }}</td>
               <td class="justify-start layout">
                 <v-tooltip left>
                   <v-icon
@@ -97,7 +96,7 @@
 new Vue({
   el: '#app',
   data: {
-    users: [],
+    areas: [],
     headers: [
       {
         text: 'ID',
@@ -105,34 +104,31 @@ new Vue({
         sortable: true,
         value: 'id'
       },
-      {text: 'Nombre de Usuario', value: 'username'},
-      {text: 'Acciones', value:"name", sortable: false}
+      {text: 'Nombres', value: 'name', sortable: true},
+      {text: 'Acciones', value: "actions", sortable: false}
     ],
     loading: false,
-    see_password: false,
     editedItem: {
       id: null,
-      username: '',
-      password: ''
+      name: ''
     },
     defaultItem: {
       id: null,
-      username: '',
-      password: ''
+      name: ''
     },
     editedIndex: -1,
     dialog: false,
     rules: {
-      required: value => !!value || 'Este campo es requerido.',
+      required: value => !!value || 'Este campo es requerido.'
     }
   },
   methods: {
     load() {
       this.loading = true;
-      axios.get('getUsers')
+      axios.get('read')
       .then(response => {
         this.loading = false;
-        this.users = response.data.users
+        this.areas = response.data.areas
       })
       .catch(error => {
         this.loading = false;
@@ -141,14 +137,13 @@ new Vue({
     },
     editItem(item){
       this.dialog = true;
-      this.editedIndex = this.users.indexOf(item);
+      this.editedIndex = this.areas.indexOf(item);
       this.editedItem = Object.assign({},item);
-      this.editedItem.is_admin = parseInt(this.editedItem.is_admin);
     },
     deleteItem(item){
       Swal({
         title: '¿Estás seguro?',
-        text: "¡El usuario será eliminado para siempre! ¡y con él todos los errores que registró!",
+        text: "El area sera eliminada permanentemente!",
         type: 'warning',
         showCancelButton: true,
         confirmButtonText: '¡Si! ¡eliminar!',
@@ -164,7 +159,7 @@ new Vue({
             {
               Swal(
                 '¡Eliminado!',
-                'El usuario ha sido eliminado.',
+                'El area ha sido eliminada.',
                 'success'
               ).then(response => {
                 this.load();
@@ -186,62 +181,53 @@ new Vue({
         ) {
           Swal(
             'Cancelado',
-            'El usuario no fue eliminado.',
+            'El area no fue eliminada.',
             'success'
           )
         }
       })
     },
     save(){
-      let verifyUsername = new FormData();
-      verifyUsername.append('usernameTest',JSON.stringify({id: this.editedItem.id, username: this.editedItem.username}))
-      axios.post('usernameIsAvailable',verifyUsername)
-      .then(isAvailable =>{
-        if(isAvailable.data.response)
+      let data = new FormData();
+      data.append('area_form',JSON.stringify(this.editedItem));
+      if(this.$refs.form.validate())
+      {
+        if(this.editedItem.id == null)
         {
-          let data = new FormData();
-          data.append('user_form',JSON.stringify(this.editedItem));
-          if(this.editedItem.id == null)
-          {
-            axios.post('create',data)
-            .then(response => {
-              swal('Excelente!','Usuario creado correctamente','success')
-              .then(val => {
-                this.load();
-                this.dialog = false;
-              })
-            })
-            .catch(error => {
+          axios.post('create',data)
+          .then(response => {
+            swal('Excelente!','Area creada correctamente','success')
+            .then(val => {
               this.load();
+              this.dialog = false;
             })
-          }
-          else
-          {
-            axios.post('update',data)
-            .then(response => {
-              swal('Excelente!','Usuario actualizado correctamente','success')
-              .then(val => {
-                this.load();
-                this.dialog = false;
-              })
-            })
-            .catch(error => {
-              this.load();
-            })
-          }
+          })
+          .catch(error => {
+            this.load();
+          })
         }
         else
         {
-          swal('Lo sentimos','ese nombre de usuario ya está en uso','error');
+          axios.post('update',data)
+          .then(response => {
+            swal('Excelente!','Area actualizada correctamente','success')
+            .then(val => {
+              this.load();
+              this.dialog = false;
+            })
+          })
+          .catch(error => {
+            this.load();
+          })
         }
-      })
+      }
     },
     close(){
+      this.dialog = false;
       setTimeout(() => {
-        this.dialog = false;
         this.editedItem = Object.assign({}, this.defaultItem)
         this.editedIndex = -1
-        this.$refs.form.reset();
+        this.$refs.form.reset()
       }, 300)
     }
   },
@@ -250,26 +236,31 @@ new Vue({
   },
   computed: {
     formTitle () {
-        return this.editedIndex === -1 ? 'Nuevo usuario' : 'Editar usuario'
+      return this.editedIndex === -1 ? 'Nueva area' : 'Editar area'
     },
-    cantSubmit() {
-      if(this.editedItem.username === undefined)
+    canSubmit() {
+      if(this.dialog)
       {
-        this.editedItem.username = '';
+        if(this.editedItem.name != undefined)
+        {
+          return this.editedItem.name.length > 0;
+        }
+        else
+        {
+          return false;
+        }
       }
-      if(this.editedItem.password === undefined)
+      else
       {
-        this.editedItem.password = '';
+        return false;
       }
-      
-      return (this.editedItem.username.trim().length == 0 ) || (this.editedItem.id == null && this.editedItem.password.trim().length == 0) 
     }
   },
   watch: {
     dialog (val) {
       val || this.close()
     }
-  },
+  }
 });
 
 

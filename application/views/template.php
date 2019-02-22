@@ -15,8 +15,11 @@
     <nav>
       <a href="#" id="hamburger-menu" class="sidenav-trigger"><i class="material-icons">menu</i></a>
       <a href="<?= base_url('/') ?>" class="brand-logo">Esteno</a>
-      <ul class="links">
-        <li><a href="<?= base_url('/users/listado') ?>">Usuarios</a></li>
+      <ul class="links">        
+        <li><a href="<?= base_url('workers/') ?>">Trabajadores</a></li>
+        <li><a href="<?= base_url('positions/') ?>">Cargos</a></li>
+        <li><a href="<?= base_url('areas/') ?>">Areas</a></li>
+        <li><a href="<?= base_url('users/listado') ?>">Usuarios</a></li>
         <li id="logoutButton"><a class="logout-button" href="<?=base_url('/users/logout')?>">Cerrar Sesión</a></li>
       </ul>
     </nav>
@@ -25,11 +28,10 @@
     <nav>
       <ul class="links" class="sidenav grey darken-4 white-text">
         <li><a class="white-text" href="<?= base_url('/') ?>">Esteno</a></li>
-        <li><a href="<?= base_url('/captioners/') ?>">Digitadores</a></li>
-        <li><a href="<?= base_url('/errors/') ?>">Errores</a></li>
-        <?PHP if($this->session->userdata('is_admin')): ?>
-          <li><a href="<?= base_url('/users/listado') ?>">Usuarios</a></li>
-        <?PHP endif; ?>
+        <li><a href="<?= base_url('workers/') ?>">Trabajadores</a></li>
+        <li><a href="<?= base_url('positions/') ?>">Cargos</a></li>
+        <li><a href="<?= base_url('areas/') ?>">Areas</a></li>
+        <li><a href="<?= base_url('users/listado') ?>">Usuarios</a></li>
         <li class="red darken-1"><a class="white-text" href="<?=base_url('users/logout')?>">Cerrar sesión</a></li>
       </ul>
     </nav>
