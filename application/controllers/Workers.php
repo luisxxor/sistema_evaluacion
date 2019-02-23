@@ -5,7 +5,7 @@ class Workers extends CI_Controller {
   
 	public function __construct() {
 		parent::__construct();
-		$this->load->model('User_model', 'user');
+		$this->load->model('Worker_model', 'worker');
 		$this->load->library('form_validation');
 	}
 	
@@ -18,6 +18,20 @@ class Workers extends CI_Controller {
 			$data['content'] = 'workers/index';
 			$this->load->view('template', $data);
 		}
+    }
+    
+    public function read()
+	{
+		if ($this->session->userdata('is_authenticated') == FALSE) {
+			echo json_encode(['status' => '403','message' => 'Permission Denied']);
+			return null;
+		}
+
+		$data = $this->worker->getAll();
+
+		echo json_encode([
+			'workers' => $data
+		]);
 	}
 	
 	public function create() {

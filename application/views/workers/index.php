@@ -1,4 +1,5 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/3.3.4/css/inputmask.min.css" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js"></script>
 
 <style>
   [v-cloak], [v-cloak] > * {
@@ -27,11 +28,38 @@
                   <v-flex xs12>
                     <v-text-field v-model="editedItem.name" :rules="[rules.required]" label="Nombre"></v-text-field>
                   </v-flex>
-                  <v-flex xs12>
-                    <v-text-field v-model="editedItem.lastname" label="Apellido"></v-text-field>
+                  <v-flex 12>
+                    <v-menu
+                      ref="admission_date"
+                      v-model="menu"
+                      :close-on-content-click="false"
+                      :nudge-right="40"
+                      :return-value.sync="editedItem.admission_date"
+                      lazy
+                      transition="scale-transition"
+                      offset-y
+                      full-width
+                      min-width="290px"
+                    >
+                      <v-text-field
+                        slot="activator"
+                        v-model="editedItem.admission_date"
+                        label="Fecha de admisión"
+                        :rules="[rules.required]" 
+                        readonly
+                      ></v-text-field>
+                      <v-date-picker :max="moment().format()" locale="es" v-model="editedItem.admission_date" no-title scrollable>
+                        <v-spacer></v-spacer>
+                        <v-btn v-cloak flat color="primary" @click="menu = false">Cancelar</v-btn>
+                        <v-btn v-cloak flat color="primary" @click="$refs.admission_date.save(editedItem.admission_date)">Seleccionar</v-btn>
+                      </v-date-picker>
+                    </v-menu>
                   </v-flex>
                   <v-flex xs12>
-                    <v-text-field @input="handleRut" :error-messages="rutErrors" :rules="[rules.required]" maxlength="12" v-model="editedItem.rut" label="RUT"></v-text-field>
+                    <v-autocomplete :rules="[rules.required]" v-model="editedItem.position_id" :items="positions" item-text="name" item-value="id" label="Cargo"></v-autocomplete>
+                  </v-flex>
+                  <v-flex xs12>
+                    <v-autocomplete :rules="[rules.required]" v-model="editedItem.area_id" :items="areas" item-text="name" item-value="id" label="Area"></v-autocomplete>
                   </v-flex>
                 </v-form>
                 </v-layout>
@@ -41,14 +69,14 @@
             <v-card-actions>
               <v-spacer></v-spacer>
               <v-btn v-cloak color="blue darken-1" flat @click="close">Cancelar</v-btn>
-              <v-btn v-cloak color="blue darken-1" flat @click="save" :disabled="!canSubmit" >Guardar</v-btn>
+              <v-btn v-cloak color="blue darken-1" flat @click="save" :disabled="canSubmit" >Guardar</v-btn>
             </v-card-actions>
           </v-card>
         </v-dialog>
         <v-card>
           <v-data-table
             :headers="headers"
-            :items="captioners"
+            :items="workers"
             class="elevation-1"
             :loading="loading"
             no-data-text="No hay registros"
@@ -57,8 +85,9 @@
             <template slot="items" slot-scope="props">
               <td class="text-xs-left">{{ props.item.id }}</td>
               <td class="text-xs-left">{{ props.item.name }}</td>
-              <td class="text-xs-left">{{ props.item.lastname }}</td>
-              <td class="text-xs-left">{{ props.item.rut }}</td>
+              <td class="text-xs-left">{{ props.item.admission_date }}</td>
+              <td class="text-xs-left">{{ props.item.position }}</td>
+              <td class="text-xs-left">{{ props.item.area }}</td>
               <td class="justify-start layout">
                 <v-tooltip left>
                   <v-icon
@@ -104,7 +133,9 @@
 new Vue({
   el: '#app',
   data: {
-    captioners: [],
+    workers: [],
+    areas: [],
+    positions: [],
     headers: [
       {
         text: 'ID',
@@ -113,46 +144,62 @@ new Vue({
         value: 'id'
       },
       {text: 'Nombres', value: 'name', sortable: true},
-      {text: 'Apellidos', value: 'lastname', sortable: true },
-      {text: 'RUT', value:"rut", sortable: false},
+      {text: 'Fecha de ingreso', value: 'admission_date', sortable: true },
+      {text: 'Cargo', value:"position", sortable: true},
+      {text: 'Area', value:"area", sortable: true},     
       {text: 'Acciones', value: "actions", sortable: false}
     ],
     loading: false,
     editedItem: {
       id: null,
       name: '',
-      lastname: '',
-      rut: ''
+      admission_date: '',
+      position: null,
+      area: null
     },
     defaultItem: {
       id: null,
       name: '',
-      lastname: '',
-      rut: ''
+      admission_date: '',
+      position: null,
+      area: null
     },
     editedIndex: -1,
     dialog: false,
+    menu: false,
     rules: {
       required: value => !!value || 'Este campo es requerido.',
       maxLength: value => value.length < 10 || 'STAPH'
     }
   },
   methods: {
+    moment() {
+      return moment();
+    },
     load() {
       this.loading = true;
       axios.get('read')
       .then(response => {
         this.loading = false;
-        this.captioners = response.data.captioners
+        this.workers = response.data.workers
       })
       .catch(error => {
         this.loading = false;
         console.log(error)
       })
+
+      axios.get('<?PHP echo base_url("areas/read"); ?>')
+      .then(response => {
+        this.areas = response.data.areas;
+      })
+      axios.get('<?PHP echo base_url("positions/read"); ?>')
+      .then(response => {
+        this.positions = response.data.positions;
+      })
     },
     editItem(item){
       this.dialog = true;
-      this.editedIndex = this.captioners.indexOf(item);
+      this.editedIndex = this.workers.indexOf(item);
       this.editedItem = Object.assign({},item);
     },
     deleteItem(item){
@@ -204,14 +251,14 @@ new Vue({
     },
     save(){
       let data = new FormData();
-      data.append('captioner_form',JSON.stringify(this.editedItem));
+      data.append('worker_form',JSON.stringify(this.editedItem));
       if(this.$refs.form.validate())
       {
         if(this.editedItem.id == null)
         {
           axios.post('create',data)
           .then(response => {
-            swal('Excelente!','Captioner creado correctamente','success')
+            swal('Excelente!','Trabajador creado correctamente','success')
             .then(val => {
               this.load();
               this.dialog = false;
@@ -244,118 +291,23 @@ new Vue({
         this.editedIndex = -1
         this.$refs.form.reset()
       }, 300)
-    },
-    cleanRut(rut) {
-      if(rut === undefined)
-      {
-        return ''
-      }
-      else
-      {
-        return rut.replace(/[^0-9kK]+/g,'').toLowerCase();
-      }
-    },
-    formatRut(rut) {
-      if(rut === undefined)
-      {
-        return ''
-      }
-      else
-      {
-        if (rut.length > 1) {
-          rut = rut.slice(0,-1)+'-'+rut.slice(-1);
-        if (rut.length > 5) {
-          if (rut.length > 8) {
-              return rut.slice(0,-8)+'.'+rut.slice(-8,-5) +'.'+rut.slice(-5);
-            }
-          return rut.slice(0,-5) +'.'+rut.slice(-5);
-          }
-        }
-        return rut
-      }
-
-    },
-    validateRut(rut) {
-      if(rut == undefined)
-      {
-        return false;
-      }
-
-      let pattern = /^0*(\d{1,3}(\.?\d{3})*)\-?([\dkK])$/
-      if (pattern.test(rut)) {
-        let numberRut = this.cleanRut(rut).slice(0, -1);
-        let auxArray = [3, 2, 7, 6, 5, 4, 3, 2];
-        let sum = 0;
-
-        for (let i = numberRut.length - 1; i >= 0; i--) {
-          sum += parseInt(numberRut[i]) * auxArray[i];
-        }
-        switch (11 - sum % 11) {
-          case 11:
-            return rut.slice(-1) == 0;
-          case 10:
-            return rut.slice(-1) == 'k';
-          default:
-            return rut.slice(-1) == 11 - sum % 11;
-        }
-      }
-      return false;
-    },
-    handleRut() {
-      this.editedItem.rut = this.formatRut(this.cleanRut(this.editedItem.rut));
     }
-
   },
   created() {
     this.load();
   },
   computed: {
     formTitle () {
-      return this.editedIndex === -1 ? 'Nuevo digitador' : 'Editar digitador'
-    },
-    rutErrors() {
-      const errors = [];
-      if(this.dialog)
-      {
-        if(this.editedItem.rut != undefined)
-        {
-          if(this.editedItem.rut.length > 0)
-          {
-            if(!this.validateRut(this.editedItem.rut) || this.editedItem.rut.length < 8)
-            {
-              errors.push('Este RUT no es válido')
-            }
-          }
-        }
-        
-      }
-      return errors;
+      return this.editedIndex === -1 ? 'Nuevo trabajador' : 'Editar trabajador'
     },
     canSubmit() {
-      if(this.dialog)
-      {
-        if(this.editedItem.name != undefined && this.editedItem.lastname != undefined && this.editedItem.rut != undefined)
-        {
-          return this.editedItem.name.length > 0 && this.editedItem.rut.length > 0 && this.rutErrors.length == 0;
-        }
-        else
-        {
-          return false;
-        }
-      }
-      else
-      {
-        return false;
-      }
+      return false;
     }
   },
   watch: {
     dialog (val) {
       val || this.close()
     }
-  },
-  filters: {
-    rut: val => this.formatRut(this.cleanRut(value))
   }
 });
 
